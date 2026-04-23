@@ -1,0 +1,13 @@
+{
+  "name": "Eternal Couple Portfolio",
+  "description": "An elegant, shared digital space for couples to preserve memories, daily logs, and profiles with secure Google authentication and invitation system.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "authentication",
+    "database",
+    "storage"
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Information about a registered user",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "partnershipId": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Mate": {
+      "title": "Mate",
+      "description": "Details about one partner in the relationship",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "birthday": { "type": "string" },
+        "hobbies": { "type": "string" },
+        "photoUrl": { "type": "string" }
+      }
+    },
+    "Partnership": {
+      "title": "Partnership",
+      "description": "The core relationship entity",
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "mate1": { "$ref": "Mate" },
+        "mate2": { "$ref": "Mate" },
+        "createdAt": { "type": "string" },
+        "lastUpdate": { "type": "string" },
+        "lastUpdateType": { "type": "string" },
+        "lastUpdateBy": { "type": "string" },
+        "backgroundUrl": { "type": "string" }
+      }
+    },
+    "Memory": {
+      "title": "Memory",
+      "description": "A shared photo and description",
+      "type": "object",
+      "properties": {
+        "photoUrl": { "type": "string" },
+        "description": { "type": "string" },
+        "timestamp": { "type": "object" },
+        "createdBy": { "type": "string" }
+      }
+    },
+    "Log": {
+      "title": "Log",
+      "description": "A daily journal entry",
+      "type": "object",
+      "properties": {
+        "content": { "type": "string" },
+        "date": { "type": "string" },
+        "timestamp": { "type": "object" },
+        "createdBy": { "type": "string" }
+      }
+    },
+    "Invitation": {
+      "title": "Invitation",
+      "description": "Invite for a partner to join a sanctuary",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "partnershipId": { "type": "string" },
+        "senderUid": { "type": "string" },
+        "senderName": { "type": "string" },
+        "timestamp": { "type": "string" }
+      }
+    },
+    "Whitelist": {
+      "title": "Whitelist",
+      "description": "Allowed emails for the sanctuary",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "addedAt": { "type": "string" },
+        "invitedBy": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile records"
+    },
+    "/whitelist/{email}": {
+      "schema": "Whitelist",
+      "description": "List of emails allowed to log in"
+    },
+    "/partnerships/{partnershipId}": {
+      "schema": "Partnership",
+      "description": "Relationship records"
+    },
+    "/partnerships/{partnershipId}/memories/{memoryId}": {
+      "schema": "Memory",
+      "description": "Photo memories subcollection"
+    },
+    "/partnerships/{partnershipId}/logs/{logId}": {
+      "schema": "Log",
+      "description": "Daily journal entries subcollection"
+    },
+    "/invitations/{invitationId}": {
+      "schema": "Invitation",
+      "description": "Temporary invitation records"
+    }
+  }
+}

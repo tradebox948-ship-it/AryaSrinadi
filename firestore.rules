@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 0.1 Primitives
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isVerified() { return request.auth.token.email_verified == true; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // 1. User Profiles
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'email', 'displayName', 'photoURL', 'partnershipId'])
+          && data.uid == request.auth.uid
+          && data.email == request.auth.token.email
+          && data.displayName is string && data.displayName.size() <= 128
+          && (data.partnershipId == null || (data.partnershipId is string && data.partnershipId.size() <= 128));
+      }
+
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['partnershipId', 'displayName', 'photoURL']);
+    }
+
+    // 2. Whitelist
+    match /whitelist/{email} {
+      allow get: if isSignedIn() && (request.auth.token.email.lower() == email.lower() || email.lower() == 'tradebox948@gmail.com');
+      allow create: if isVerified() && email.size() <= 256; 
+      allow delete: if isVerified() && (existing().invitedBy == request.auth.uid);
+    }
+
+    // 3. Partnerships
+    match /partnerships/{partnershipId} {
+      function isMember() {
+        return isSignedIn() && request.auth.uid in existing().members;
+      }
+      function isValidMate(mate) {
+        return mate.name is string && mate.name.size() <= 128
+          && mate.birthday is string && mate.birthday.size() <= 64
+          && mate.hobbies is string && mate.hobbies.size() <= 512
+          && (mate.photoUrl is string && mate.photoUrl.size() <= 1024);
+      }
+      function isValidPartnership(data) {
+        return data.members is list && data.members.size() <= 2
+          && data.members[0] is string
+          && isValidMate(data.mate1) && isValidMate(data.mate2)
+          && data.createdAt is string;
+      }
+
+      allow get: if isMember() && isValidId(partnershipId);
+      allow create: if isVerified() && isValidId(partnershipId) && isValidPartnership(incoming()) && request.auth.uid in incoming().members;
+      allow update: if isMember() && isValidId(partnershipId)
+        && isValidPartnership(incoming())
+        && (
+          // Action: Update Partner Details
+          incoming().diff(existing()).affectedKeys().hasAny(['mate1', 'mate2', 'lastUpdate', 'lastUpdateType', 'lastUpdateBy', 'backgroundUrl'])
+          || 
+          // Action: Join Partnership (add self to members)
+          (incoming().members.size() == 2 && request.auth.uid in incoming().members && existing().members.size() == 1)
+        );
+      
+      // 4. Subcollections (Memories & Logs)
+      match /memories/{memoryId} {
+        function isValidMemory(data) {
+          return data.photoUrl is string && data.photoUrl.size() <= 1024
+            && data.description is string && data.description.size() <= 1000
+            && data.createdBy == request.auth.uid
+            && data.timestamp == request.time;
+        }
+        allow list: if isMember();
+        allow create: if isMember() && isValidId(memoryId) && isValidMemory(incoming());
+        allow delete: if isMember() && isValidId(memoryId) && (existing().createdBy == request.auth.uid);
+      }
+
+      match /logs/{logId} {
+        function isValidLog(data) {
+          return data.content is string && data.content.size() <= 5000
+            && data.date is string && data.date.size() <= 32
+            && data.createdBy == request.auth.uid
+            && data.timestamp == request.time;
+        }
+        allow list: if isMember();
+        allow create: if isMember() && isValidId(logId) && isValidLog(incoming());
+        allow delete: if isMember() && isValidId(logId) && (existing().createdBy == request.auth.uid);
+      }
+    }
+
+    // 5. Invitations
+    match /invitations/{invitationId} {
+      allow create: if isVerified() && isValidId(invitationId);
+      allow list: if isSignedIn() && resource.data.senderUid == request.auth.uid;
+      allow get: if isSignedIn() && isValidId(invitationId) && (request.auth.token.email.lower() == existing().email.lower() || existing().senderUid == request.auth.uid);
+      allow delete: if isSignedIn() && isValidId(invitationId) && (request.auth.token.email.lower() == existing().email.lower() || existing().senderUid == request.auth.uid);
+    }
+  }
+}
