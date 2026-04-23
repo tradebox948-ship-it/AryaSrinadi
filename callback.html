@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authenticating...</title>
+    <style>
+        body {
+            background-color: #09090b;
+            color: #d4d4d8;
+            font-family: sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .message { text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="message">
+        <p>Authentication successful. Closing window...</p>
+    </div>
+    <script>
+        // Send message to parent window and close
+        if (window.opener) {
+            window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+            // Small delay to ensure message is sent
+            setTimeout(() => window.close(), 1000);
+        } else {
+            // Fallback if not opened as popup
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
